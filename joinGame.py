@@ -17,7 +17,7 @@ def main(argv):
         return -1
 
     playerIP = get_IP()
-    initialize.InitializePlayer(playerIP).join_lobby_run_game(hostIP)
+    initializePlayer.InitializePlayer(playerIP).join_lobby_run_game(hostIP)
 
 
 def assert_args(argv):

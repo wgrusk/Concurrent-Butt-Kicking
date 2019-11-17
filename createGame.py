@@ -4,7 +4,7 @@ import json
 
 def main():
     hostIP = get_IP()
-    initialize.InitializeHost(hostIP).create_lobby_run_game()
+    initializeHost.InitializeHost(hostIP).create_lobby_run_game()
 
 
 def get_IP():
