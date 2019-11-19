@@ -6,9 +6,9 @@ import json
 class GameLogic:
 
     def __init__(self, players, story_file):
-        self.players = players
-        self.num_players = len(players)
-        self.story = story_file
+        self._players = players
+        self._num_players = len(players)
+        self._story = story_file
 
     def runGame(self):
         threads = []
@@ -27,7 +27,7 @@ class GameLogic:
     def runPlayer(self, player):
         '''
         So essentially we want to run in a loop where the server thread assigns
-        the current_story var to the next part of the story, the notifies the
+        the current_story var to the next part of the story, then notifies the
         client threads that it's there. They all read it concurrently, and then
         pass that info onto their respective client handlers. Before the server
         thread notifies the client threads, it should start some sort of
