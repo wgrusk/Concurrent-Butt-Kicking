@@ -50,6 +50,32 @@ def num_to_str(num):
 
 # takes current turn's player
 def do_turn(curr_player, state, game):
+    # Pick a card
+    card_pick = game.pick_a_card("What card do you want to try and take?",
+                                 curr_player)
+
+    # Pick a player from which to try and take that card
+    player_pick = game.pick_a_player(curr_player, state,
+                                     "Who do you want to take it from?")
+
+    card_pick_rank = card_pick.rank_string()
+    game.broadcast("%s asks: do you have any %s's?" % (curr_player.name, card_pick_rank))
+
+    if game.card_in_hand(card_pick, player_pick):
+        correct_card = lambda card: card_pick.same_rank(card)
+        num_taken = game.give_all_card_from_to(player_pick, curr_player, correct_card)
+
+        game.broadcast("%s took %d %s's from %s!" % (curr_player.name,
+                                                    num_taken,
+                                                    card_pick_rank,
+                                                    player_pick.name))
+
+
+
+
+
+
+
     ## Pick a card
     req_num = pick_a_card(curr_player.hand)
 
@@ -75,7 +101,7 @@ def do_turn(curr_player, state, game):
         for num in hand_nums:
             if hand_nums.count(num) == 4:
                 game.broadcast(source=curr_player, "I have a book of 4 %ss!" % num_to_str(num))
-                curr_player.hand = list(filter(lambda card: card.number != num, curr_player.hand))
+                curr_player.hand = [card for card in curr_player.hand if card.numer != num]
 
         ## Take your turn again after a successful guess
         game.set_next_player(curr_player)
@@ -92,13 +118,13 @@ def draw_player(player, state):
     print("")
     print("Your hand has:")
     for card in player.hand:
-        print("%s of %s", %(num_to_str(card.number), card.suit))
+        print("%s of %s", % (num_to_str(card.number), card.suit))
 
 
 def main():
     game = new CardGame()
 
-    # default turn order=1,2,3,4..., default table_cards is 0, defualt interupts is false, default first player is P1
+    # default turn order=1,2,3,4..., default table_cards is 0, default interupts is false, default first player is P1
     game.set_config(hand_size_init=5, deck=GenCardGame.playing_cards, num_players=(2,4))
     game.set_win_condition(has_won)
     game.set_turn(do_turn)
