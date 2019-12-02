@@ -1,20 +1,6 @@
 #!/usr/bin/env python3
 
 import gencardgame
-
-class Card:
-    def __init__(self, number, suit):
-        self.number = number
-        self.suit = suit
-
-## Client defined dict can hold data members that are not present in default player class
-class Player:
-    def __init__(self, name, extras):
-        self.hand = []
-        self.hand_size = 0
-        self.score = 0
-        self.name = name
-        self.extras = extras
     
 # returns player number who has won or None if the game is not over
 def has_won(state):
@@ -33,8 +19,8 @@ def has_won(state):
 
     return winner
 
-def pick_a_card(hand):
-    num = input("Pick the number of a card in your hand:")
+def pick_a_card(prompt, hand):
+    num = input(prompt)
 
     hand_nums = [num for (suit, num) in hand]
 
@@ -53,9 +39,9 @@ def pick_a_player(state):
 
     return name
 
-def card_is_in_hand(card, player):
+def card_is_in_hand(card, player, game):
     hand_nums = [num for (suit, num) in player.hand]
-    GenCardGame.broadcast(source=player, "%s" % ("Yes" if card in hand_nums else "No, go fish!"))
+    game.broadcast(source=player, "%s" % ("Yes" if card in hand_nums else "No, go fish!"))
     return card in hand_nums
 
 def num_to_str(num):
@@ -63,14 +49,14 @@ def num_to_str(num):
     return x[num]
 
 # takes current turn's player
-def do_turn(curr_player, state):
+def do_turn(curr_player, state, game):
     ## Pick a card
     req_num = pick_a_card(curr_player.hand)
 
     ## Pick a player to ask for card
-    p_target = GenCardGame.get_player(pick_a_player(state))
+    p_target = game.get_player(pick_a_player(state))
 
-    GenCardGame.broadcast(source=curr_player, "Player %s do you have any %ss?", (p_target.name, num_to_str(req_num)))
+    game.broadcast(source=curr_player, "Player %s do you have any %ss?", (p_target.name, num_to_str(req_num)))
 
     if card_is_in_hand(card_num, p_target):
         ## add the cards to curr_player, remove from p_target
@@ -78,26 +64,24 @@ def do_turn(curr_player, state):
         for card in p_target.hand:
             if not card.number == req_num:
                 continue
-            GenCardGame.remove_card(card, p_target)
-            GenCardGame.add_card(card, curr_player)
+            game.remove_card(card, p_target)
+            game.add_card(card, curr_player)
             counter += 1
 
-        GenCardGame.broadcast("%s took %d cards from %s" % (curr_player.name, counter, p_target.name))
+        game.broadcast("%s took %d cards from %s" % (curr_player.name, counter, p_target.name))
         
         ## Check for 4 of a kind
         hand_nums = [num for (suit, num) in hand]
         for num in hand_nums:
             if hand_nums.count(num) == 4:
-                GenCardGame.broadcast(source=curr_player, "I have a book of 4 %ss!" % num_to_str(num))
+                game.broadcast(source=curr_player, "I have a book of 4 %ss!" % num_to_str(num))
                 curr_player.hand = list(filter(lambda card: card.number != num, curr_player.hand))
 
         ## Take your turn again after a successful guess
-        GenCardGame.set_next_player(curr_player)
-
-
+        game.set_next_player(curr_player)
     ## go fish
     else:
-        GenCardGame.draw_card(curr_player)
+        game.draw_card(curr_player)
 
 def draw_player(player, state):
     for p in state['players']:
