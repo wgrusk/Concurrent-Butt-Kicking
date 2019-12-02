@@ -96,10 +96,10 @@ def draw_player(player, state):
 
 
 def main():
-    game = new CardGame();
+    game = new CardGame()
 
     # default turn order=1,2,3,4..., default table_cards is 0, defualt interupts is false, default first player is P1
-    game.set_config(hand_size_init=5, deck=GenCardGame.playing_cards, num_players=range(2,4))
+    game.set_config(hand_size_init=5, deck=GenCardGame.playing_cards, num_players=(2,4))
     game.set_win_condition(has_won)
     game.set_turn(do_turn)
     game.set_player_extras(None)
