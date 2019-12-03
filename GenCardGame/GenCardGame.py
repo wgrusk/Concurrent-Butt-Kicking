@@ -3,6 +3,8 @@ import sys, socket, json, select, threading
 from utils import *
 
 PORT = 16390
+state_change = None
+
 
 class CardGame:
     ## TODO: client provided functions should be initialized to none so that
@@ -154,10 +156,11 @@ class CardGame:
     def run_client(self):
         global state_change
         ## Wait for signal that it is my turn
-        state = wait_until_turn(self.name, self.parent_socket)
+        interrupt, state = wait_until_turn(self.name, self.parent_socket)
         
         ## An interrupt results in a none state until a new state is received
-        if state == None:
+        if interrupt == None:
+            self.client_interrupt_func(state)
             return
         
 
@@ -188,6 +191,7 @@ class CardGame:
                 ## Send back result to server
                 send_json({'STATE_CHANGE':state_change, 'FROM': self.name}, \
                           self.parent_socket)
+                break
 
     def start_server(self):
         ## Make game state
@@ -201,7 +205,9 @@ class CardGame:
         while 1:
 
 def do_turn_caller(player, state, do_turn_func):
-    
+    global state_change
+
+    state_change = do_turn_func(player, state)
 
 def check_for_interrupt(sock):
     sock.settimeout(0.01)
@@ -222,10 +228,9 @@ def wait_until_turn(name, sock):
             print("Game shut down!  Exiting.")
             sys.exit(0)
         elif 'TURN' in data and data['TURN'] == name:
-            return data['GAMESTATE']
+            return 1, data['GAMESTATE']
         elif 'INTERRUPT' in data:
-            
-            return None
+            return None, data['GAMESTATE']
 
 #class Player:
 
