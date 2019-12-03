@@ -1,14 +1,31 @@
 #!/usr/bin/env python3
-import sys, socket, json, select
+import sys, socket, json, select, threading
 from utils import *
 
 PORT = 16390
+state_change = None
+
 
 class CardGame:
+    ## TODO: client provided functions should be initialized to none so that
+    ## we can check if they have been provided or not, and either execute
+    ## them, skip (if possible), or crash (if we can't skip them)
     def __init__(self):
         self.parent_socket = socket.socket()
         self.child_connections = []
+        self.stdin_thread          = None
         
+        ## User provided closures
+        self.do_turn_func          = None
+        self.win_check_func        = None
+        self.round_end_func        = None
+        self.draw_player_func      = None
+        self.round_start_func      = None
+        self.mutate_state_func     = None
+        self.specialist_turn_func  = None
+        self.client_interrupt_func = None
+        self.server_interrupt_func = None
+
     def set_config(self, hand_size_init=5, hand_size_max=None, 
                    deck=playing_cards, secondary_deck=None, num_players=(2, 2), 
                    turn_order="inorder", interrupts=False, first_player=0, 
@@ -45,10 +62,14 @@ class CardGame:
     def set_specialist_turn(specialist_turn_func):
         self.specialist_turn_func = specialist_turn_func
 
+    def set_client_interrupt_handler(client_interrupt_func):
+        self.client_interrupt_func = client_interrupt_func
+
     def run(self):
         if len(sys.argv) == 2 and sys.argv[2] == '-h':
             #self.is_host = True
             self.setup_lobby()
+            self.start_server()       
         elif len(sys.argv) == 4 and sys.argv[2] == '-c':
             #self.is_host = False
             self.setup_parent_connection()
@@ -103,20 +124,18 @@ class CardGame:
                     else:
                         ## Flush extra chars from line if they dont match
                         sys.stdin.readline()
-                                            
 
         print("Let the games begin!")
+
         for (name, conn, addr) in self.child_connections:
             send_json({'msg':'Starting the game!', 'START': 1}, conn)
-
-        self.start_server()       
 
     def setup_parent_connection(self):
         host_addr = sys.argv[3]
         self.name = sys.argv[1]
-        msg = {'name': self.name}
+        
         self.parent_socket.connect((host_addr, PORT))
-        send_json(msg, self.parent_socket)
+        send_json({'name': self.name}, self.parent_socket)
         
         while 1:
             data = recv_json(self.parent_socket)
@@ -128,21 +147,51 @@ class CardGame:
                 self.start_client()
 
     def start_client(self):
+        if self.do_turn_func == None:
+            print("do_turn function not provided, cannot run game!", 
+                  file=sys.stderr)
+        while 1:
+            self.run_client()
+
+    def run_client(self):
+        global state_change
         ## Wait for signal that it is my turn
-        state = wait_until_turn(self.name, self.parent_socket)
+        interrupt, state = wait_until_turn(self.name, self.parent_socket)
         
+        ## An interrupt results in a none state until a new state is received
+        if interrupt == None:
+            self.client_interrupt_func(state)
+            return
+        
+
         ## I am the current player so I will look myself up
         player = list(filter(lambda p: p.name == self.name, state['players']))
 
         ## Draw screen for client
         self.draw_player_func(player, state)
         
-        ## Do my turn
-        state_change = self.do_turn(player, state)
+        ## Spin off a thread to run the turn.  In the meanwhile we should be
+        ## checking for an interrupt signal and the thread finishing
+        self.stdin_thread = threading.Thread(target=do_turn_caller, \
+                                             args=(player, state,   \
+                                                   self.do_turn_func))
+        self.stdin_thread.start()
+        
+        while 1:
+            ## Check if we have been interrupted by the server
+            i_state = check_for_interrupt(self.parent_socket)
+            if not i_state == None:
+                if self.client_interrupt_func != None:
+                    self.client_interrupt_func(i_state)
+                return
 
-        ## Send back result to server
-        send_json({'STATE_CHANGE':state_change, 'FROM': self.name}, \
-                  self.parent_socket)
+            ## If not interrupted check if we have finished our turn yet
+            self.stdin_thread.join(0.01)
+            if not self.stdin_thread.is_alive():
+                ## Send back result to server
+                send_json({'STATE_CHANGE':state_change, 'FROM': self.name}, \
+                          self.parent_socket)
+                break
 
     def start_server(self):
         ## Make game state
@@ -155,8 +204,21 @@ class CardGame:
         ## Round loop
         while 1:
 
+def do_turn_caller(player, state, do_turn_func):
+    global state_change
 
+    state_change = do_turn_func(player, state)
 
+def check_for_interrupt(sock):
+    sock.settimeout(0.01)
+    try:
+        data = recv_json(sock)
+        if 'INTERRUPT' in data:
+            return data['GAMESTATE']
+        else return None
+    ## No interrupt was received!
+    except socket.timeout:
+        return None
 
 def wait_until_turn(name, sock):
     while 1:
@@ -166,7 +228,9 @@ def wait_until_turn(name, sock):
             print("Game shut down!  Exiting.")
             sys.exit(0)
         elif 'TURN' in data and data['TURN'] == name:
-            return data['GAMESTATE']
+            return 1, data['GAMESTATE']
+        elif 'INTERRUPT' in data:
+            return None, data['GAMESTATE']
 
 #class Player:
 

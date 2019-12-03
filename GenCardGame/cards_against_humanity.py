@@ -8,57 +8,57 @@ def has_won(state):
     winner = None
     for p in state['players']:
         if p.points == 5:
-        	winner = p.name
+            winner = p.name
             is_over = True
 
     return winner
 
 # draw card from deck
 def draw_card(deck):
-	return deck.pop()
+    return deck.pop()
 
 def start_round(state):
-	# judge draws black card
-	black_card = state.secondary_deck.draw_card()
+    # judge draws black card
+    black_card = state.secondary_deck.draw_card()
 
-	# "reads" card to players
-	GenCardGame.broadcast("The prompt is: %s" % black_card.message)
+    # "reads" card to players
+    GenCardGame.broadcast("The prompt is: %s" % black_card.message)
 
 
 # conduct round of game
 def do_turn(curr_player, state, game):
 
-	if state.judge != curr_player.name:
+    if state.judge != curr_player.name:
 
-		response = pick_a_card("Pick a card to answer the prompt: ", curr_player.hand)
-		game.send_choice(response);
+        response = pick_a_card("Pick a card to answer the prompt: ", curr_player.hand)
+        game.send_choice(response);
 
-		# waits for responses
-		responses = []
-		responses = game.get_responses()
+        # waits for responses
+        responses = []
+        responses = game.get_responses()
 
-		# print responses to all users
-		game.broadcast_fun(print_responses(responses))
+        # print responses to all users
+        game.broadcast_fun(print_responses(responses))
 
-		# could this return a player instead of a name
-		winner = pick_a_player
+        # could this return a player instead of a name
+        winner = pick_a_player
 
-		game.broadcast("The winner is: %s" % winner.name)
+        game.broadcast("The winner is: %s" % winner.name)
 
-		# function to add points
-		winner.add_points(1)
+        # function to add points
+        winner.add_points(1)
 
-		# function to 
+        # function to 
 
 def mutate_state(curr_player, state, game):
 
 
 def do_judge(state):
-	# judge draws black card
-	winner = pick_a_card(prompt, state.table_cards)
+    # judge draws black card
+    winner = pick_a_card(prompt, state.table_cards)
 
-	# "reads" card to players
-	game.broadcast("The winner is: %s" % winner.name)
+    # "reads" card to players
+    game.broadcast("The winner is: %s" % winner.name)
 
 
 def main():
