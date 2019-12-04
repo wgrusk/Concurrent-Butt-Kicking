@@ -6,6 +6,12 @@ PORT = 16390
 state_change = None
 
 
+# queue of events
+# event class
+# each event is concurrent or normal
+# run user function to handle state change
+# 
+
 class CardGame:
     ## TODO: client provided functions should be initialized to none so that
     ## we can check if they have been provided or not, and either execute

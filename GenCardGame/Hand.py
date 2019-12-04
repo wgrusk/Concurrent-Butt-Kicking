@@ -37,6 +37,12 @@ class Hand:
         for card in self.cards:
             card.print_card()
 
+    def get_json(self):
+        cards = []
+        for card in self.cards:
+            cards.append(card.get_json())
+        return cards
+
     def print_hand(self):
         """prints player's hand"""
         faces = []
@@ -52,6 +58,5 @@ class Hand:
             lines.append(curr_line)
 
         for line in lines:
-            ' '.join(line)
-            print(line + '\n')
+            print(" ".join(line))
 

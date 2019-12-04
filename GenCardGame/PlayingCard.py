@@ -18,13 +18,26 @@ class PlayingCard:
         return x[self.number - 1]
         return num
 
+    def suit_string(self):
+        """returns rank of card as a string"""
+        types = ['Hearts', 'Spades', 'Diamonds', 'Clubs']
+        if self.suit == 'H':
+            return 'Hearts'
+        if self.suit == 'S':
+            return 'Spades'
+        if self.suit == 'D':
+            return 'Diamonds'
+        if self.suit == 'C':
+            return 'Clubs'
+        return None
+
     def rank_num(self):
         """returns rank of card as its integer representation"""
         return self.number
 
     def same_rank(self, card):
         """return true if given card is of the same rank"""
-        if self.rank == card.rank:
+        if self.number == card.number:
             return True
         else:
             return False
@@ -38,10 +51,13 @@ class PlayingCard:
 
     def is_equal(self, card):
         """return true if given card is of the same suit and rank"""
-        if self.suit == card.suit and self.rank == card.rank:
+        if self.suit == card.suit and self.number == card.number:
             return True
         else: 
             return False
+
+    def get_json(self):
+        return (self.number, self.suit)
 
     def get_face(self):
         """returns card's face as well as width and height as a list of asciis to allow multiple card to be printed"""
@@ -111,7 +127,7 @@ class PlayingCard:
 │       {}│
 └─────────┘""".format(*card_face).split('\n')
 
-        return 9, 11, card
+        return 10, 11, card
 
 
     def print_card(self):

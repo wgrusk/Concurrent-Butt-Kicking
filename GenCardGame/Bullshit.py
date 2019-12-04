@@ -7,6 +7,14 @@ from Hand import Hand
 from Player import Player
 from PlayingCard import PlayingCard
 
+c = CardGame()
+
+c.set_config()
+
+
+
+c.run()
+
 standard_deck = [(1, 'H'), (2, 'H'), (3, 'H'), (4, 'H'), (5, 'H'), (6, 'H'), 
                  (7, 'H'), (8, 'H'), (9, 'H'), (10, 'H'), (11, 'H'), (12, 'H'), 
                  (13, 'H'), (1, 'S'), (2, 'S'), (3, 'S'), (4, 'S'), (5, 'S'), 
@@ -28,15 +36,30 @@ deck1.shuffle()
 
 players = []
 
-hands = deck1.divide_deck(4)
+hands = deck1.divide_deck(5)
 
 for hand in hands:
     players.append(Player(hand))
 
-for player in players:
-    print("your hand:")
-    player.hand.print_hand()
+# for player in players:
+#     print("your hand:")
+#     player.hand.print_hand()
+
+players[0].hand.print_hand()
+
+print("which card do you want to play?")
+
+num = input("number (1 - 13): ")
+suit = input("suit (D, H, C, or S): ")
+
+card_to_play = PlayingCard((int(num), suit))
 
 
+played = players[0].hand.pick_card(card_to_play)
+
+if played != None:
+    print("player one played %s of %s" % (card_to_play.rank_string(), card_to_play.suit_string()))
+
+players[0].hand.print_hand()    
 
 

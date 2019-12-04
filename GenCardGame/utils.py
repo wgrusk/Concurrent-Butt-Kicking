@@ -15,6 +15,6 @@ def send_json(j, sock):
 
 # Receives a json from the passed socket and returns it as a dict
 def recv_json(sock):
-    msg_len = int(sock.recv(9).decode('utf-8'))
+    msg_len= int(sock.recv(9).decode('utf-8'))
     msg = json.loads(sock.recv(msg_len).decode('utf-8'))
     return msg

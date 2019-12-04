@@ -24,6 +24,12 @@ class Deck:
         else:
             return False
 
+    def get_json(self):
+        cards = []
+        for card in self.cards:
+            cards.append(card.get_json())
+        return cards
+
     def add_deck(self, cards):
         """adds a list of cards to a deck"""
         self.cards.extend(cards)
