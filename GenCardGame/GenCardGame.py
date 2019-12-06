@@ -3,14 +3,6 @@ import sys, socket, json, select, threading
 from utils import *
 
 PORT = 16390
-state_change = None
-
-
-# queue of events
-# event class
-# each event is concurrent or normal
-# run user function to handle state change
-# 
 
 class CardGame:
     ## TODO: client provided functions should be initialized to none so that
@@ -21,17 +13,6 @@ class CardGame:
         self.child_connections = []
         self.stdin_thread          = None
         
-        ## User provided closures
-        self.do_turn_func          = None
-        self.win_check_func        = None
-        self.round_end_func        = None
-        self.draw_player_func      = None
-        self.round_start_func      = None
-        self.mutate_state_func     = None
-        self.specialist_turn_func  = None
-        self.client_interrupt_func = None
-        self.server_interrupt_func = None
-
     def set_config(self, hand_size_init=5, hand_size_max=None, 
                    deck=playing_cards, secondary_deck=None, num_players=(2, 2), 
                    turn_order="inorder", interrupts=False, first_player=0, 
@@ -46,30 +27,6 @@ class CardGame:
         self.min_players      = num_players[0]
         self.max_players      = num_players[1]
         self.specialist_order = specialist_order
-
-    def set_win_condition(win_check_func):
-        self.win_check_func = win_check_func
-
-    def set_do_turn(do_turn_func):
-        self.do_turn_func = do_turn_func
-
-    def set_draw_player(draw_player_func):
-        self.draw_player_func = draw_player_func
-
-    def set_mutate_state(mutate_state_func):
-        self.mutate_state_func = mutate_state_func
-
-    def set_round_start(round_start_func):
-        self.round_start_func = round_start_func
-
-    def set_round_end(round_end_func):
-        self.round_end_func = round_end_func
-
-    def set_specialist_turn(specialist_turn_func):
-        self.specialist_turn_func = specialist_turn_func
-
-    def set_client_interrupt_handler(client_interrupt_func):
-        self.client_interrupt_func = client_interrupt_func
 
     def run(self):
         if len(sys.argv) == 2 and sys.argv[2] == '-h':
@@ -162,11 +119,10 @@ class CardGame:
     def run_client(self):
         global state_change
         ## Wait for signal that it is my turn
-        interrupt, state = wait_until_turn(self.name, self.parent_socket)
+        state = wait_until_turn(self.name, self.parent_socket)
         
         ## An interrupt results in a none state until a new state is received
-        if interrupt == None:
-            self.client_interrupt_func(state)
+        if state == None:
             return
         
 
@@ -197,7 +153,6 @@ class CardGame:
                 ## Send back result to server
                 send_json({'STATE_CHANGE':state_change, 'FROM': self.name}, \
                           self.parent_socket)
-                break
 
     def start_server(self):
         ## Make game state
@@ -209,11 +164,6 @@ class CardGame:
     def play(self):
         ## Round loop
         while 1:
-
-def do_turn_caller(player, state, do_turn_func):
-    global state_change
-
-    state_change = do_turn_func(player, state)
 
 def check_for_interrupt(sock):
     sock.settimeout(0.01)
@@ -234,9 +184,10 @@ def wait_until_turn(name, sock):
             print("Game shut down!  Exiting.")
             sys.exit(0)
         elif 'TURN' in data and data['TURN'] == name:
-            return 1, data['GAMESTATE']
+            return data['GAMESTATE']
         elif 'INTERRUPT' in data:
-            return None, data['GAMESTATE']
+            
+            return None
 
 #class Player:
 
