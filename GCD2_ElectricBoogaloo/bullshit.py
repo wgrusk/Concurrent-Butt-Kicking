@@ -33,43 +33,47 @@ def win_cond_bs(gamestate):
 
 def async_turn_bs(gamestate):
     """do turn BS"""
+    player = gamestate.players[game.curr_player]
 
     game.curr_rank = game.curr_rank + 1
     if game.curr_rank > 13:
         game.curr_rank = 1
 
-    print()
+    print("It's your turn! This is your current hand:")
 
-    game.players[game.curr_player].hand.print_hand()
+    player.hand.print_hand()
 
-    print("which card(s) do you want to play?")
+    print("which card(s) do you want to put down?")
 
     num_cards = 0
     played = None
 
-    game.add_last_move()
+    gamestate.add_last_move()
 
     while (num_cards < 4):
-        num = input("number (1 - 13) or 'Q' to quit: ")
+        num = input("Number (1 - 13) or 'Q' to stop: ")
         if num == 'Q':
+            if num_cards == 0:
+                print("You must play at least 1 card")
+                continue
             break
-        suit = input("suit (D, H, C, or S): ")
+        suit = input("Suit (D, H, C, or S): ")
         card_to_play = PlayingCard((int(num), suit))
-        played = game.players[game.curr_player].hand.pick_card(card_to_play)
+        played = player.hand.pick_card(card_to_play)
         if played == None:
             print("That card is not in your hand... try again:")
         else:
-            game.add_card_on_table(played)
-            game.add_to_last_move(played)
+            gamestate.add_card_on_table(played)
+            gamestate.add_to_last_move(played)
             num_cards += 1
 
-    if played != None:
-        message = ("%s played %d %s(s)" % (game.players[game.curr_player].name, \
-        									num_cards, game.get_curr_rank()))
+    message = input("What do you want to say when you put these cards down?")
 
-    return game, message
+    message = player.name + " said: " + message + "."
 
-def call_bs(game, index):
+    return (gamestate, message)
+
+def sync_turn_bs(gamestate):
 	"""call BS"""
 
     called_bs = False
@@ -77,24 +81,24 @@ def call_bs(game, index):
     if call == 'y':
         called_bs = True
 
-    return game, message
+    return called_bs
 
-def handle_bs(gamestate, messages):
+# Message is now tuple of player, and the message. Need this to broadcast who called
+# bullshit.
+def sync_handle_bs(game, gamestate, already_called, message):
 	"""accept first BS call"""
-	for m in messages:
-		if message != '':
-			return game, message
-    message = ''
 
-    if called_bs == True:
-        rank = game.curr_rank
+    game.broadcast()
 
-        bs = False
+    if not already_called and message[1]:
+        rank = gamestate.curr_rank
+
+        lied = False
         for card in game.last_move.cards:
             if card.number != game.curr_rank:
-                bs = True
+                lied = True
 
-        if bs == True:
+        if lied == True:
             message = ("BULLSHIT! %s takes cards" % game.players[game.curr_player].name)
             for card in game.last_move.cards:
                 game.players[game.curr_player].hand.add_card(card)
@@ -116,11 +120,11 @@ def main():
     c = CardGame()
     c.set_num_players((4, 6))
     c.set_init_state(init_state_bs)
-    c.set_win_cond(win_cond_bs)
+    # c.set_win_cond(win_cond_bs)
 
     # defining game logic
     c.add_async_event(async_turn_bs)
-
+    c.add_sync_event(sync_turn_bs, sync_handle_bs)
 
 
 

@@ -82,6 +82,7 @@ class Player:
         player_dict['hand'] = self.hand.get_json()
         player_dict['points'] = self.points
         player_dict['name'] = self.name
+        player_dict['ip'] == self.ip
         return player_dict
 
     def add_hand(self, cards):
