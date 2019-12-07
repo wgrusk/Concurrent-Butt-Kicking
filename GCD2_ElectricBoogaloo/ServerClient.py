@@ -17,6 +17,11 @@ standard_deck = [(1, 'H'), (2, 'H'), (3, 'H'), (4, 'H'), (5, 'H'), (6, 'H'),
                  (4, 'C'), (5, 'C'), (6, 'C'), (7, 'C'), (8, 'C'), (9, 'C'), 
                  (10, 'C'), (11, 'C'), (12, 'C'), (13, 'C')]
 
+class Event:
+    def __init__(self, t, c):
+        self.type = t
+        self.closure = c
+
 class CardGame:
     ## TODO: client provided functions should be initialized to none so that
     ## we can check if they have been provided or not, and either execute
@@ -129,6 +134,24 @@ class CardGame:
                   file=sys.stderr)
         while 1:
             self.run_client()
+
+    def signal_async_clients(self):
+        threads = []
+        for (name, conn, addr) in self.child_connections:
+            t = threading.Thread(target=asnc_thread, args=(conn, messages, self.message_lock)
+            t.start()
+            threads.append(t)
+        
+        for thread in threads:
+            thread.join()    
+
+
+def async_thread(conn, messages, lock):
+    send_json({'SYNC': 1}, conn)
+
+    data = recv_json(conn)
+    with lock:
+        messages.append(data['SYNC_RESPONSE'])
 
 # client side
 def do_turn_caller(game_state, do_turn, server_sock, player, index):
