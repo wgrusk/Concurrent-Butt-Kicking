@@ -176,23 +176,60 @@ class CardGame:
                 print("Thanks for playing!")
                 break
 
-    def signal_async_clients(self, event):
+    def signal_sync_clients(self, event):
         threads = []
         for (name, conn, addr) in self.child_connections:
-            t = threading.Thread(target=asnc_thread, args=(conn, messages, self.message_lock, event.uid))
+            t = threading.Thread(target=sync_thread,
+                                 args=(conn,
+                                       messages,
+                                       self.message_lock,
+                                       event.uid))
             t.start()
             threads.append(t)
         
         for thread in threads:
-            thread.join()    
+            thread.join()
+
+        # TODO
+        # Need to insert something that appends the stop that shit flag to the
+        # messages queue
 
 
-def async_thread(conn, messages, lock, uid):
+# TODO
+# We need to have the user specify the initial accumulator
+def consume_message_queue(messages, queue_lock, queue_cond,
+                          sync_fun, init_acc, curr_state):
+    new_state   = curr_state
+    accumulator = init_acc
+    while True:
+        with queue_lock:
+            if not messages:
+                queue_cond.wait()
+            message = messages.pop(0)
+            # TODO
+            # Might be better to make this something a little more unique
+            if message is -1:
+                break
+            new_state, accumulator = sync_fun(new_state, accumulator, message)
+
+    return new_state
+
+
+# TODO
+# Have to make sure that wherever queue_cond is initialized, it's initialized
+# like this:
+#
+# queue_lock = threading.Lock()
+# queue_cond = threading.Condition(queue_lock)
+#
+# ... or something like this.
+def sync_thread(conn, messages, queue_lock, queue_cond, uid):
     send_json({'SYNC': uid}, conn)
 
     data = recv_json(conn)
-    with lock:
+    with queue_lock:
         messages.append(data['SYNC_RESPONSE'])
+        queue_cond.notify()
 
 # client side
 def do_turn_caller(game_state, do_turn, server_sock, player, index):
