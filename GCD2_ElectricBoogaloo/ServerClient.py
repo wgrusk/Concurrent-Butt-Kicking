@@ -21,6 +21,20 @@ class CardGame:
     ## TODO: client provided functions should be initialized to none so that
     ## we can check if they have been provided or not, and either execute
     ## them, skip (if possible), or crash (if we can't skip them)
+
+    ## Classes that need updating:
+    ## Event Class
+    ## Client needs to include data structure to tell which do_turn function
+    ## to run (sync or async)
+
+    ## Functions we need:
+    ## add_async_event()
+    ## add_sync_event()
+    ## add_check_win()
+    ## run_server()
+    ## run_client()
+
+
     def __init__(self):
         self.parent_socket = socket.socket()
         self.child_connections = []
@@ -44,7 +58,7 @@ class CardGame:
         if len(sys.argv) == 2 and sys.argv[1] == '-h':
             #self.is_host = True
             self.setup_lobby()
-            self.start_server()       
+            self.start_server()
         elif len(sys.argv) == 4 and sys.argv[2] == '-c':
             #self.is_host = False
             self.setup_parent_connection()
@@ -129,6 +143,7 @@ class CardGame:
                   file=sys.stderr)
         while 1:
             self.run_client()
+
 
 # client side
 def do_turn_caller(game_state, do_turn, server_sock, player, index):
