@@ -72,8 +72,8 @@ class GameState:
         return gamestate
 
 class Player:
-    def __init__(self, cards, name='player'):
-        self.hand = Hand(cards)
+    def __init__(self, ip, name):
+        self.ip
         self.points = 0
         self.name = name
 
@@ -83,6 +83,9 @@ class Player:
         player_dict['points'] = self.points
         player_dict['name'] = self.name
         return player_dict
+
+    def add_hand(self, cards):
+        self.hand = Hand(cards)
 
 class Deck:
     def __init__(self, cards):

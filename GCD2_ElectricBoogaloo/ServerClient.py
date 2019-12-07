@@ -6,6 +6,7 @@ from GameClasses import *
 PORT = 16390
 state_change = None
 state_lock = threading.Lock()
+counter = 0
 
 standard_deck = [(1, 'H'), (2, 'H'), (3, 'H'), (4, 'H'), (5, 'H'), (6, 'H'), 
                  (7, 'H'), (8, 'H'), (9, 'H'), (10, 'H'), (11, 'H'), (12, 'H'), 
@@ -58,6 +59,14 @@ class CardGame:
 
     def set_init_state(self, init_state_func):
         self.init_state_func = init_state_func
+
+    def add_async_event(self, async_func):
+        global counter
+        new_event = Event('async', counter, )
+        self.events.append()
+
+    def add_sync_event()
+
 
     def run(self):
         ## TODO check to make sure we have the stuff needed to run game
