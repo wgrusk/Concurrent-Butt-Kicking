@@ -18,8 +18,9 @@ standard_deck = [(1, 'H'), (2, 'H'), (3, 'H'), (4, 'H'), (5, 'H'), (6, 'H'),
                  (10, 'C'), (11, 'C'), (12, 'C'), (13, 'C')]
 
 class Event:
-    def __init__(self, t, c):
+    def __init__(self, t, uid, c):
         self.type = t
+        self.uid = uid
         self.closure = c
 
 class CardGame:
@@ -135,10 +136,10 @@ class CardGame:
         while 1:
             self.run_client()
 
-    def signal_async_clients(self):
+    def signal_async_clients(self, event):
         threads = []
         for (name, conn, addr) in self.child_connections:
-            t = threading.Thread(target=asnc_thread, args=(conn, messages, self.message_lock)
+            t = threading.Thread(target=asnc_thread, args=(conn, messages, self.message_lock, event.uid)
             t.start()
             threads.append(t)
         
@@ -146,8 +147,8 @@ class CardGame:
             thread.join()    
 
 
-def async_thread(conn, messages, lock):
-    send_json({'SYNC': 1}, conn)
+def async_thread(conn, messages, lock, uid):
+    send_json({'SYNC': uid}, conn)
 
     data = recv_json(conn)
     with lock:
