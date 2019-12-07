@@ -151,35 +151,35 @@ class CardGame:
             self.run_client()
 
     def run_client(self):
-    while True:
-        data = recv_json(self.parent_socket)
+        while True:
+            data = recv_json(self.parent_socket)
 
-        if 'SYNC' in data:
-            event = list(filter(lambda e: e.uid == data['SYNC'].uid, self.events))
-            fun = event.closure
-            gamestate = reconstruct_state(data['STATE'])
-            response = fun(gamestate)
-            #depending on what reponse is it might need to be converted to json
-            send_json({'SYNC_RESPONSE' : json.dumps(response)} self.parent_socket)
+            if 'SYNC' in data:
+                event = list(filter(lambda e: e.uid == data['SYNC'].uid, self.events))
+                fun = event.closure
+                gamestate = reconstruct_state(data['STATE'])
+                response = fun(gamestate)
+                #depending on what reponse is it might need to be converted to json
+                send_json({'SYNC_RESPONSE' : json.dumps(response)}, self.parent_socket)
 
-        # these kinda do same thing?
-        if 'ASYNC' in data:
-            event = list(filter(lambda e: e.uid == data['SYNC'].uid, self.events))
-            fun = event.closure
-            #state needs to be passed
-            gamestate = reconstruct_state(data['STATE'])
-            new_state = fun(gamestate)
-            send_json({'ASYNC_RESPONSE' : json.dumps(new_state.get_json())} self.parent_socket)
+            # these kinda do same thing?
+            if 'ASYNC' in data:
+                event = list(filter(lambda e: e.uid == data['SYNC'].uid, self.events))
+                fun = event.closure
+                #state needs to be passed
+                gamestate = reconstruct_state(data['STATE'])
+                new_state = fun(gamestate)
+                send_json({'ASYNC_RESPONSE' : json.dumps(new_state.get_json())}, self.parent_socket)
 
-        # probably need soemthing like this
-        if 'STOP' in data:
-            print("Thanks for playing!")
-            break
+            # probably need soemthing like this
+            if 'STOP' in data:
+                print("Thanks for playing!")
+                break
 
     def signal_async_clients(self, event):
         threads = []
         for (name, conn, addr) in self.child_connections:
-            t = threading.Thread(target=asnc_thread, args=(conn, messages, self.message_lock, event.uid)
+            t = threading.Thread(target=asnc_thread, args=(conn, messages, self.message_lock, event.uid))
             t.start()
             threads.append(t)
         
