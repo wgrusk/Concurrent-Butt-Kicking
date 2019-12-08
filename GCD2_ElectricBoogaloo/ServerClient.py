@@ -55,13 +55,12 @@ class CardGame:
         self.message_cond = threading.Condition(self.message_lock)
         self.terminator = Terminator()
 
-
-
         self.min_players     = None
         self.max_players     = None
         self.init_state_func = None
         self.state           = None
         self.win_check_flag  = False
+        self.is_host         = False
     
     def set_config(self, num_players=(2, 2)):
         self.min_players      = num_players[0]
@@ -94,8 +93,8 @@ class CardGame:
     ## Asserts that the game is ready to run.  If not, exit.
     def ready_check(self):
         assert self.min_players != None && self.max_players != None, \
-               "Error: Number of players not set! ""
-               Call set_num_players((min, max)) to fix. Exiting!\n"
+               "Error: Number of players not set! "
+               "Call set_num_players((min, max)) to fix. Exiting!\n"
         assert self.events != [], \
                "Error: Event queue is empty! Add at least one event! Exiting!\n"
         assert self.init_state_func != None, \
@@ -175,6 +174,7 @@ class CardGame:
             send_json({'msg':'Starting the game!', 'START': 1}, conn)
 
     def broadcast(self, msg):
+        assert self.is_host, "Only the server may call broadcast. Exiting\n"
         data = {'BROADCAST': str(msg)}
         for (name, conn, addr) in self.child_connections:
             send_json(data, conn)
