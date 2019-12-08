@@ -139,6 +139,45 @@ class Deck:
                 break
         return hands
 
+    def print_deck(self):
+        """prints player's hand"""
+        faces = []
+        for card in self.cards:
+            height, width, face = card.get_face()
+            faces.append(face)
+
+        lines = []
+        for i in range(height):
+            curr_line = []
+            for j in range(len(self.cards)):
+                curr_line.append(faces[j][i])
+            lines.append(curr_line)
+
+        for line in lines:
+            print(" ".join(line))
+
+    def to_string(self):
+
+        faces = []
+        for card in self.cards:
+            height, width, face = card.get_face()
+            faces.append(face)
+
+        lines = []
+        for i in range(height):
+            curr_line = []
+            for j in range(len(self.cards)):
+                curr_line.append(faces[j][i])
+            lines.append(curr_line)
+
+        deck = ""
+        for line in lines:
+            deck += " ".join(line)
+            deck += "\n"
+
+        return deck
+
+
 
 class Hand:
     def __init__(self, cards):
@@ -199,6 +238,26 @@ class Hand:
 
         for line in lines:
             print(" ".join(line))
+
+    def to_string(self):
+        faces = []
+        for card in self.cards:
+            height, width, face = card.get_face()
+            faces.append(face)
+
+        lines = []
+        for i in range(height):
+            curr_line = []
+            for j in range(len(self.cards)):
+                curr_line.append(faces[j][i])
+            lines.append(curr_line)
+
+        hand = ""
+        for line in lines:
+            hand += " ".join(line) 
+            hand += "\n"
+
+        return hand
 
 def num_to_type(num):
     x = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K']

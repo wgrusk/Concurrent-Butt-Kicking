@@ -88,28 +88,48 @@ def sync_turn_bs(gamestate):
 def sync_handle_bs(game, gamestate, already_called, message):
 	"""accept first BS call"""
 
-    game.broadcast()
+    bs_player_name, called_bs = message
 
-    if not already_called and message[1]:
+    curr_player = gamestate.players[game.curr_player]
+
+    if not already_called and called_bs:
+        game.broadcast("%s called Bullshit! Let's see what see what %s really played:" % (bs_player_name, curr_player.name))
+        game.broadcast(# print gamestate.last_turn)
+            )
         rank = gamestate.curr_rank
 
         lied = False
-        for card in game.last_move.cards:
-            if card.number != game.curr_rank:
+        for card in gamestate.last_move.cards:
+            if card.number != gamestate.curr_rank:
                 lied = True
 
-        if lied == True:
-            message = ("BULLSHIT! %s takes cards" % game.players[game.curr_player].name)
-            for card in game.last_move.cards:
-                game.players[game.curr_player].hand.add_card(card)
+        if lied:
+            game.broadcast("Looks like they're full of shit! %s takes the cards" % curr_player.name)
+            for card in gamestate.cards_on_table.cards:
+                curr_player.hand.add_card(card)
         else:
-            message = ("NO BULLSHIT! %s takes cards" % game.players[index].name)
-            for card in game.last_move.cards:
-                game.players[index].hand.add_card(card)
 
-    game.curr_player += 1
-    if game.curr_player == len(game.players):
-        game.curr_player = 0
+            game.broadcast("Looks like they were telling the truth! %s takes cards" % bs_player_name)
+            bs_player = None
+            for player in gamestate.players:
+                if player.name == bs_player_name:
+                    bs_player = player
+
+            for card in gamestate.last_move.cards:
+                bs_player.hand.add_card(card)
+
+        return (gamestate, True)
+    else:
+        return (gamestate, already_called)
+
+def next_bs_player(gamestate):
+    gamestate.curr_player += 1
+    if gamestate.curr_player == len(gamestate.players):
+        gamestate.curr_player = 0
+
+    return gamestate
+
+
 
 def print_game(game, index):
     game.players[index].hand.print_hand_vertical()
@@ -120,22 +140,14 @@ def main():
     c = CardGame()
     c.set_num_players((4, 6))
     c.set_init_state(init_state_bs)
-    # c.set_win_cond(win_cond_bs)
 
     # defining game logic
     c.add_async_event(async_turn_bs)
-    c.add_sync_event(sync_turn_bs, sync_handle_bs)
-
-
-
-    ## Code for one turn-
-    ## Async events only need client runnable code
-    c.add_async_event(do_turn)
-    ## Sync events needs client and server runnable
-    c.add_sync_event(call_bs, handle_bs)
-    
+    c.add_sync_event(sync_turn_bs, sync_handle_bs, False)
     c.add_wincheck_event(check_win) 
+    c.add_next_turn(next_bs_player)
     
+    # running game
     c.run()
 
 if __name__ == "__main__":
