@@ -354,6 +354,8 @@ def reconstruct_state(state):
         game.judge = game_state['judge']
     if 'curr_rank' in game_state:
         game.curr_rank = game_state['curr_rank']
+    if 'curr_player' in game_state:
+        game.curr_player = game_state['curr_player']
     if 'last_move' in game_state:
         game.last_move = reconstruct_deck(game_state['last_move'])
     return game
