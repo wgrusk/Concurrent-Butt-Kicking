@@ -18,19 +18,6 @@ standard_deck = [(1, 'H'), (2, 'H'), (3, 'H'), (4, 'H'), (5, 'H'), (6, 'H'),
                  (4, 'C'), (5, 'C'), (6, 'C'), (7, 'C'), (8, 'C'), (9, 'C'), 
                  (10, 'C'), (11, 'C'), (12, 'C'), (13, 'C')]
 
-class Event:
-    def __init__(self, t, uid, c):
-        self.type = t
-        self.uid = uid
-        self.closure = c
-
-## A unique class used to terminate the message queue.  This way a user
-## defined var will never be mistaken for the end of the queue
-class Terminator:
-    def __init__(self):
-        self.name = "Arnold"
-        ## Your clothes... Give them to me. - Arnold
-
 class CardGame:
     ## TODO: client provided functions should be initialized to none so that
     ## we can check if they have been provided or not, and either execute
@@ -43,8 +30,20 @@ class CardGame:
 
     ## Functions we need:
     ## run_server()
-    ## run_client()
+    
+    ## A class to represent game events
+    class Event:
+        def __init__(self, t, uid, c):
+            self.type = t
+            self.uid = uid
+            self.closure = c
 
+    ## A unique class used to terminate the message queue.  This way a user
+    ## defined var will never be mistaken for the end of the queue
+    class Terminator:
+        def __init__(self):
+            self.name = "Arnold"
+            ## Your clothes... Give them to me. - Arnold
 
     def __init__(self):
         self.parent_socket = socket.socket()
@@ -53,7 +52,7 @@ class CardGame:
         self.messages = []
         self.message_lock = Threading.Lock()
         self.message_cond = threading.Condition(self.message_lock)
-        self.terminator = Terminator()
+        self.terminator = self.Terminator()
 
         self.min_players     = None
         self.max_players     = None
@@ -77,7 +76,9 @@ class CardGame:
     def add_event(self, type, f):
         global counter
 
-        self.events.append(Event(type, 'event_' + type + "_" + str(counter), f))
+        self.events.append(self.Event(type, 
+                                      'event_' + type + "_" + str(counter), 
+                                      f))
         counter += 1
 
     def add_wincheck_event(self, f)
@@ -87,8 +88,8 @@ class CardGame:
     def add_async_event(self, f):
         self.add_event("async", f)
     
-    def add_sync_event(self, f):
-        self.add_event("sync", f)
+    def add_sync_event(self, f, init_acc):
+        self.add_event("sync", (f, init_acc))
 
     ## Asserts that the game is ready to run.  If not, exit.
     def ready_check(self):
@@ -173,6 +174,9 @@ class CardGame:
         for (name, conn, addr) in self.child_connections:
             send_json({'msg':'Starting the game!', 'START': 1}, conn)
 
+    def run_server(self):
+        
+    
     def broadcast(self, msg):
         assert self.is_host, "Only the server may call broadcast. Exiting\n"
         data = {'BROADCAST': str(msg)}
@@ -281,8 +285,8 @@ def client_message_loop(sock, messages, lock, cond):
 # TODO
 # We need to have the user specify the initial accumulator
 def consume_message_queue(messages, queue_lock, queue_cond,
-                          sync_fun, init_acc, curr_state):
-    new_state   = curr_state
+                          game, sync_fun, init_acc, curr_state):
+    new_state = curr_state
     accumulator = init_acc
     while True:
         ## TODO: will this deadlock?  We never give up queue_lock...
@@ -293,8 +297,13 @@ def consume_message_queue(messages, queue_lock, queue_cond,
             
             if message is self.terminator:
                 break
-            new_state, accumulator = sync_fun(self, new_state, accumulator, message)
+            new_state, accumulator = sync_fun(self,
+                                              game,
+                                              new_state,
+                                              accumulator,
+                                              message)
 
+    new_state = game.next_player(new_state)
     return new_state
 
 
