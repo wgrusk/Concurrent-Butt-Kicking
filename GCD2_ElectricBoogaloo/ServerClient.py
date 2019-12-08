@@ -87,8 +87,8 @@ class CardGame:
     def add_async_event(self, f):
         self.add_event("async", f)
     
-    def add_sync_event(self, f):
-        self.add_event("sync", f)
+    def add_sync_event(self, f, init_acc):
+        self.add_event("sync", (f, init_acc))
 
     ## Asserts that the game is ready to run.  If not, exit.
     def ready_check(self):
@@ -281,8 +281,8 @@ def client_message_loop(sock, messages, lock, cond):
 # TODO
 # We need to have the user specify the initial accumulator
 def consume_message_queue(messages, queue_lock, queue_cond,
-                          sync_fun, init_acc, curr_state):
-    new_state   = curr_state
+                          game, sync_fun, init_acc, curr_state):
+    new_state = curr_state
     accumulator = init_acc
     while True:
         ## TODO: will this deadlock?  We never give up queue_lock...
@@ -293,8 +293,13 @@ def consume_message_queue(messages, queue_lock, queue_cond,
             
             if message is self.terminator:
                 break
-            new_state, accumulator = sync_fun(self, new_state, accumulator, message)
+            new_state, accumulator = sync_fun(self,
+                                              game,
+                                              new_state,
+                                              accumulator,
+                                              message)
 
+    new_state = game.next_player(new_state)
     return new_state
 
 
