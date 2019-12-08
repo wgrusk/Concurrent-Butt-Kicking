@@ -24,6 +24,13 @@ class Event:
         self.uid = uid
         self.closure = c
 
+## A unique class used to terminate the message queue.  This way a user
+## defined var will never be mistaken for the end of the queue
+class Terminator:
+    def __init__(self):
+        self.name = "Arnold"
+        ## Your clothes... Give them to me. - Arnold
+
 class CardGame:
     ## TODO: client provided functions should be initialized to none so that
     ## we can check if they have been provided or not, and either execute
@@ -35,9 +42,6 @@ class CardGame:
     ## to run (sync or async)
 
     ## Functions we need:
-    ## add_async_event()
-    ## add_sync_event()
-    ## add_check_win()
     ## run_server()
     ## run_client()
 
@@ -48,34 +52,68 @@ class CardGame:
         self.events = []
         self.messages = []
         self.message_lock = Threading.Lock()
+        self.message_cond = threading.Condition(self.message_lock)
+        self.terminator = Terminator()
 
-        self.init_state_func  = None
-        self.state            = None
-    
+
+
+        self.min_players     = None
+        self.max_players     = None
+        self.init_state_func = None
+        self.state           = None
+        self.win_check_flag  = False
     
     def set_config(self, num_players=(2, 2)):
         self.min_players      = num_players[0]
         self.max_players      = num_players[1]
 
+    def set_num_players(self, num_players=(2,2)):
+        self.mix_players = num_players[0]
+        self.max_players = num_players[1]
+
     def set_init_state(self, init_state_func):
         self.init_state_func = init_state_func
 
-    def add_async_event(self, async_func):
+    ## Generate a unique id for each event using the counter
+    def add_event(self, type, f):
         global counter
-        new_event = Event('async', counter, )
-        self.events.append()
 
-    def add_sync_event()
+        self.events.append(Event(type, 'event_' + type + "_" + str(counter), f))
+        counter += 1
 
+    def add_wincheck_event(self, f)
+        self.add_event("win", f)
+        self.win_check_flag = True
+
+    def add_async_event(self, f):
+        self.add_event("async", f)
+    
+    def add_sync_event(self, f):
+        self.add_event("sync", f)
+
+    ## Asserts that the game is ready to run.  If not, exit.
+    def ready_check(self):
+        assert self.min_players != None && self.max_players != None, \
+               "Error: Number of players not set! ""
+               Call set_num_players((min, max)) to fix. Exiting!\n"
+        assert self.events != [], \
+               "Error: Event queue is empty! Add at least one event! Exiting!\n"
+        assert self.init_state_func != None, \
+               "Error: Missing init_state_function. "
+               "Call set_init_state(init_state_func) to fix.  Exiting!\n"
+        assert self.win_check_flag, \
+               "Error: Win check is not used, game may not finish! "
+               "Call add_wincheck_event(wincheck_func) to fix. Exiting!\n"
 
     def run(self):
-        ## TODO check to make sure we have the stuff needed to run game
+        self.ready_check()
+        
         if len(sys.argv) == 2 and sys.argv[1] == '-h':
-            #self.is_host = True
+            self.is_host = True
             self.setup_lobby()
             self.start_server()
         elif len(sys.argv) == 4 and sys.argv[2] == '-c':
-            #self.is_host = False
+            self.is_host = False
             self.setup_parent_connection()
         else:
             print("Usage:\n\t[EXE] -h to host a game\n\t"
@@ -136,6 +174,11 @@ class CardGame:
         for (name, conn, addr) in self.child_connections:
             send_json({'msg':'Starting the game!', 'START': 1}, conn)
 
+    def broadcast(self, msg):
+        data = {'BROADCAST': str(msg)}
+        for (name, conn, addr) in self.child_connections:
+            send_json(data, conn)
+
     ## Run lobby on client side
     def setup_parent_connection(self):
         host_addr = sys.argv[3]
@@ -156,15 +199,35 @@ class CardGame:
         if self.do_turn_func == None:
             print("do_turn function not provided, cannot run game!", 
                   file=sys.stderr)
-        while 1:
-            self.run_client()
+        
+        t = threading.Thread(target=client_message_loop, 
+                             args=(self.parent_socket, self.messages, 
+                                   self.message_lock, self.message_cond))
+        t.start()
+        self.run_client()
+        t.join()
+        print("Thanks for playing!")
+        sys.exit(0)
+
+    def get_msg(self):
+        ## Read a message if there is one
+        with self.message_lock:
+            if messages:
+                return messages.pop(0)
+        
+        ## Else Wait for a message to come in
+        self.message_cond.wait()
+
+        ## Then read it
+        with self.message_lock:
+            return messages.pop(0)
 
     def run_client(self):
         while True:
-            data = recv_json(self.parent_socket)
+            data = self.get_msg()
 
             if 'SYNC' in data:
-                event = list(filter(lambda e: e.uid == data['SYNC'].uid, self.events))
+                event = list(filter(lambda e: e.uid == data['SYNC'].uid, self.events))[0]
                 fun = event.closure
                 gamestate = reconstruct_state(data['STATE'])
                 response = fun(gamestate)
@@ -173,7 +236,7 @@ class CardGame:
 
             # these kinda do same thing?
             if 'ASYNC' in data:
-                event = list(filter(lambda e: e.uid == data['SYNC'].uid, self.events))
+                event = list(filter(lambda e: e.uid == data['SYNC'].uid, self.events))[0]
                 fun = event.closure
                 #state needs to be passed
                 gamestate = reconstruct_state(data['STATE'])
@@ -182,27 +245,38 @@ class CardGame:
 
             # probably need soemthing like this
             if 'STOP' in data:
-                print("Thanks for playing!")
-                break
+                return
 
     def signal_sync_clients(self, event):
         threads = []
         for (name, conn, addr) in self.child_connections:
             t = threading.Thread(target=sync_thread,
-                                 args=(conn,
-                                       messages,
-                                       self.message_lock,
-                                       event.uid))
+                                 args=(conn, self.messages, self.message_lock, 
+                                       self.message_cond, self.event.uid, name))
             t.start()
             threads.append(t)
         
         for thread in threads:
             thread.join()
 
-        # TODO
-        # Need to insert something that appends the stop that shit flag to the
-        # messages queue
+        with self.message_lock:
+            self.messages.append(self.terminator)
 
+def client_message_loop(sock, messages, lock, cond):
+    while True:
+        data = recv_json(sock)
+
+        ## Print broadcasts, don't pass them along
+        if 'BROADCAST' in data:
+            print(data['BROADCAST'])
+        else:
+            ## Put received message on message queue
+            with lock:
+                messages.append(data)
+                cond.notify()
+            ## Stop this thread if told to stop by server
+            if 'STOP' in data:
+                return
 
 # TODO
 # We need to have the user specify the initial accumulator
@@ -211,20 +285,20 @@ def consume_message_queue(messages, queue_lock, queue_cond,
     new_state   = curr_state
     accumulator = init_acc
     while True:
+        ## TODO: will this deadlock?  We never give up queue_lock...
         with queue_lock:
             if not messages:
                 queue_cond.wait()
             message = messages.pop(0)
-            # TODO
-            # Might be better to make this something a little more unique
-            if message is -1:
+            
+            if message is self.terminator:
                 break
-            new_state, accumulator = sync_fun(new_state, accumulator, message)
+            new_state, accumulator = sync_fun(self, new_state, accumulator, message)
 
     return new_state
 
 
-# TODO
+
 # Have to make sure that wherever queue_cond is initialized, it's initialized
 # like this:
 #
@@ -232,13 +306,13 @@ def consume_message_queue(messages, queue_lock, queue_cond,
 # queue_cond = threading.Condition(queue_lock)
 #
 # ... or something like this.
-def sync_thread(conn, messages, queue_lock, queue_cond, uid):
+def sync_thread(conn, messages, message_lock, message_cond, uid, name):
     send_json({'SYNC': uid}, conn)
 
     data = recv_json(conn)
-    with queue_lock:
-        messages.append(data['SYNC_RESPONSE'])
-        queue_cond.notify()
+    with message_lock:
+        messages.append((name, data['SYNC_RESPONSE']))
+        message_cond.notify()
 
 # client side
 def do_turn_caller(game_state, do_turn, server_sock, player, index):
