@@ -179,7 +179,7 @@ class CardGame:
                 if self.num_players >= self.min_players:
                     print("If all players are present, enter 'Y'")
                 for (n, conn, addr) in self.child_connections:
-                    send_json({'msg': "Connected %s to the lobby\nThere are now"
+                    send_json({'MSG': "Connected %s to the lobby\nThere are now"
                                " %d players connected:\n%s" \
                                % (name, self.num_players, ', '.join(self.player_names))},conn)
 
@@ -192,7 +192,7 @@ class CardGame:
                     elif ch == 'Q':
                         for (name, conn, addr) in self.child_connections:
                             print("disconnecting", name)
-                            send_json({'msg':'disconnecting!', 'DC': 1}, conn)
+                            send_json({'MSG':'disconnecting!', 'DC': 1}, conn)
                             conn.close()
                         sys.exit(0)
                     else:
@@ -202,7 +202,7 @@ class CardGame:
         print("Let the games begin!")
 
         for (name, conn, addr) in self.child_connections:
-            send_json({'msg':'Starting the game!', 'START': 1}, conn)
+            send_json({'MSG':'Starting the game!', 'START': 1}, conn)
 
     def run_server(self):
         winner = ""
@@ -262,12 +262,16 @@ class CardGame:
         
         while True:
             data = recv_json(self.parent_socket)
+            
+            if 'MSG' in data:
+                print(data['MSG'])
+
             if 'DC' in data:
                 self.parent_socket.close()
                 break
             elif 'START' in data:
                 self.start_client()
-
+    
     def start_client(self):
         if self.do_turn_func == None:
             print("do_turn function not provided, cannot run game!", 
