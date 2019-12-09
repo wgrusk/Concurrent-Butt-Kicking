@@ -43,7 +43,8 @@ def async_turn_bs(gamestate):
 
     player.hand.print_hand()
 
-    print("Current rank is: %d" % gamestate.curr_rank)
+    print("Current card is: %s" % \
+          PlayingCard.rank_to_string(gamestate.curr_rank))
 
     print("which card(s) do you want to put down?")
 
