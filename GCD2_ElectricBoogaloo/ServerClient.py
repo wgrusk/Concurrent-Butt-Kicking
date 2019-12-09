@@ -311,7 +311,7 @@ class CardGame:
                 #state needs to be passed
                 gamestate = reconstruct_state(data['STATE'])
                 new_state, message = event.closure(gamestate)
-                send_json({'ASYNC_RESPONSE' : new_state.get_json(), 
+                send_json({'ASYNC_RESPONSE' : json.dumps(new_state.get_json()), 
                            'MESSAGE' : message}, self.parent_socket)
 
             # probably need soemthing like this
