@@ -72,7 +72,7 @@ def async_turn_bs(gamestate):
             suit is not 'S'):
             print("Please enter a valid suit")
             continue
-        card_to_play = PlayingCard(num, suit)
+        card_to_play = PlayingCard((num, suit))
         played = player.hand.pick_card(card_to_play)
         if played == None:
             print("That card is not in your hand... try again:")
