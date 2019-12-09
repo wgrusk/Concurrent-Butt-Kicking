@@ -66,10 +66,10 @@ def async_turn_bs(gamestate):
             print("Please enter a valid number")
             continue
         suit = input("Suit (D, H, C, or S): ")
-        if suit is not 'D' and
-           suit is not 'H' and
-           suit is not 'C' and
-           suit is not 'S':
+        if (suit is not 'D' and
+            suit is not 'H' and
+            suit is not 'C' and
+            suit is not 'S'):
             print("Please enter a valid suit")
             continue
         card_to_play = PlayingCard(num, suit)
