@@ -285,7 +285,7 @@ class CardGame:
     def get_msg(self):
         with self.message_lock:
             if not self.messages:
-                self.messages_cond.wait()
+                self.message_cond.wait()
             return self.messages.pop(0)
 
     def run_client(self):
