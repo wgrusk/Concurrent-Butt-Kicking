@@ -367,8 +367,7 @@ def consume_message_queue(messages, queue_lock, queue_cond,
             
             if message is terminator:
                 break
-            new_state, accumulator = sync_fun(self,
-                                              game,
+            new_state, accumulator = sync_fun(game,
                                               new_state,
                                               accumulator,
                                               message)
