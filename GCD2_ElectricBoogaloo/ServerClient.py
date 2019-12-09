@@ -319,8 +319,8 @@ class CardGame:
                 t = threading.Thread(target=sync_thread,
                                      args=(conn, self.messages, self.message_lock, 
                                            self.message_cond, event.uid, name))
-            t.start()
-            threads.append(t)
+                t.start()
+                threads.append(t)
         
         for thread in threads:
             thread.join()
