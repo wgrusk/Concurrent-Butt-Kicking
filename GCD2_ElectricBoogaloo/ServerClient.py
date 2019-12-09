@@ -318,7 +318,8 @@ class CardGame:
             if name is not curr_player_name:
                 t = threading.Thread(target=sync_thread,
                                      args=(conn, self.messages, self.message_lock, 
-                                           self.message_cond, event.uid, name))
+                                           self.message_cond, event.uid, name,
+                                           self.gamestate))
                 t.start()
                 threads.append(t)
         
@@ -327,6 +328,7 @@ class CardGame:
 
         with self.message_lock:
             self.messages.append(self.terminator)
+
 
 def client_message_loop(sock, messages, lock, cond):
     while True:
@@ -344,11 +346,7 @@ def client_message_loop(sock, messages, lock, cond):
             if 'STOP' in data:
                 return
 
-def send_client_sync(sock, gamestate):
-    send_json({'SYNC': event.uid, 'STATE': json.dumps(self.gamestate.get_json())},  self.child_connections[curr_player][1])
 
-# TODO
-# We need to have the user specify the initial accumulator
 def consume_message_queue(messages, queue_lock, queue_cond,
                           game, sync_fun, init_acc, curr_state):
     new_state = curr_state
@@ -371,16 +369,9 @@ def consume_message_queue(messages, queue_lock, queue_cond,
     return new_state
 
 
-
-# Have to make sure that wherever queue_cond is initialized, it's initialized
-# like this:
-#
-# queue_lock = threading.Lock()
-# queue_cond = threading.Condition(queue_lock)
-#
-# ... or something like this.
-def sync_thread(conn, messages, message_lock, message_cond, uid, name):
-    send_json({'SYNC': uid}, conn)
+def sync_thread(conn, messages, message_lock, message_cond,
+                uid, name, gamestate):
+    send_json({'SYNC': uid, 'STATE': json.dumps(gamestate.get_json())}, conn)
 
     data = recv_json(conn)
     with message_lock:
