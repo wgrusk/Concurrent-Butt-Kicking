@@ -74,7 +74,6 @@ def async_turn_bs(gamestate):
     return (gamestate, message)
 
 def sync_turn_bs(gamestate):
-	"""call BS"""
 
     called_bs = False
     call = input("Call BS? ('y'/'n'):")
@@ -86,7 +85,7 @@ def sync_turn_bs(gamestate):
 # Message is now tuple of player, and the message. Need this to broadcast who called
 # bullshit.
 def sync_handle_bs(game, gamestate, already_called, message):
-	"""accept first BS call"""
+    """accept first BS call"""
 
     bs_player_name, called_bs = message
 
@@ -132,7 +131,7 @@ def main():
 
     # setting up game
     c = CardGame()
-    c.set_num_players((4, 6))
+    c.set_num_players((3, 6))
     c.set_init_state(init_state_bs)
 
     # defining game logic

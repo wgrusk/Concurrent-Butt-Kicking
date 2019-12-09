@@ -73,7 +73,7 @@ class CardGame:
         self.child_connections = []
         self.events = []
         self.messages = []
-        self.message_lock = Threading.Lock()
+        self.message_lock = threading.Lock()
         self.message_cond = threading.Condition(self.message_lock)
         self.terminator = self.Terminator()
 
@@ -83,13 +83,9 @@ class CardGame:
         self.gamestate           = None
         self.win_check_flag  = False
         self.is_host         = False
-    
-    def set_config(self, num_players=(2, 2)):
-        self.min_players      = num_players[0]
-        self.max_players      = num_players[1]
 
     def set_num_players(self, num_players=(2,2)):
-        self.mix_players = num_players[0]
+        self.min_players = num_players[0]
         self.max_players = num_players[1]
 
     def set_init_state(self, init_state_func):
@@ -111,8 +107,8 @@ class CardGame:
     def add_async_event(self, f):
         self.add_event("async", f)
     
-    def add_sync_event(self, f, init_acc):
-        self.add_event("sync", (f, init_acc))
+    def add_sync_event(self, client_fun, server_fun, init_acc):
+        self.add_event("sync", (client_fun, server_fun, init_acc))
 
     def add_next_turn(self, f):
         self.add_event("next", f)
@@ -120,12 +116,12 @@ class CardGame:
 
     ## Asserts that the game is ready to run.  If not, exit.
     def ready_check(self):
-        assert self.min_players != None and self.max_players != None, \
+        assert self.min_players and self.max_players, \
             "Error: Number of players not set! " + \
             "Call set_num_players((min, max)) to fix. Exiting!\n"
         assert self.events != [], \
             "Error: Event queue is empty! Add at least one event! Exiting!\n"
-        assert self.init_state_func != None, \
+        assert self.init_state_func, \
             "Error: Missing init_state_function. " + \
             "Call set_init_state(init_state_func) to fix.  Exiting!\n"
         assert self.win_check_flag, \
@@ -219,7 +215,7 @@ class CardGame:
                     curr_player_name = self.child_connections[curr_player][0]
                     for (name, sock, addr) in self.child_connections:
                         if name != curr_player_name:
-                            send_json({'BROADCAST': "It's " curr_player_name + "'s turn"}, sock)
+                            send_json({'BROADCAST': "It's " + curr_player_name + "'s turn"}, sock)
 
                     send_json({'ASYNC': event.uid, 'STATE': json.dumps(self.gamestate.get_json())},  self.child_connections[curr_player][1])
                     data = recv_json(self.child_connections[curr_player][1])
@@ -229,8 +225,8 @@ class CardGame:
                     curr_player = self.gamestate.curr_player
                     curr_player_name = self.child_connections[curr_player][0]
 
-                    init_acc = event.closure[1]
-                    message_queue_fun = event.closure[0]
+                    init_acc = event.closure[2]
+                    message_queue_fun = event.closure[1]
 
                     self.signal_sync_clients(event, curr_player_name)
                     self.gamestate = consume_message_queue(self.messages, self.message_lock,
@@ -297,8 +293,8 @@ class CardGame:
             data = self.get_msg()
 
             if 'SYNC' in data:
-                event = list(filter(lambda e: e.uid == data['SYNC'], self.events))[0]
-                fun = event.closure
+                event = [e for e in self.events if e.uid == data['SYNC']][0]
+                fun = event.closure[0]
                 gamestate = reconstruct_state(data['STATE'])
                 response = fun(gamestate)
                 #depending on what reponse is it might need to be converted to json
@@ -306,7 +302,7 @@ class CardGame:
 
             # these kinda do same thing?
             if 'ASYNC' in data:
-                event = list(filter(lambda e: e.uid == data['ASYNC'], self.events))[0]
+                event = [e for e in self.events if e.uid == data['ASYNC']][0]
                 fun = event.closure
                 #state needs to be passed
                 gamestate = reconstruct_state(data['STATE'])
