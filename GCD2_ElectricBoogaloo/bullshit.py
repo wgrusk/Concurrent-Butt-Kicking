@@ -67,7 +67,7 @@ def async_turn_bs(gamestate):
             gamestate.add_to_last_move(played)
             num_cards += 1
 
-    message = input("What do you want to say when you put these cards down?")
+    message = input("What do you want to say when you put these cards down?\n")
 
     message = player.name + " said: " + message + "."
 

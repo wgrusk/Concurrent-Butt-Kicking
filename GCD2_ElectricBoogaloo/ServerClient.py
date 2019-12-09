@@ -219,8 +219,14 @@ class CardGame:
 
                     send_json({'ASYNC': event.uid, 'STATE': json.dumps(self.gamestate.get_json())},  self.child_connections[curr_player][1])
                     data = recv_json(self.child_connections[curr_player][1])
-                    if 'ASYNC_RESPONSE' in data:
-                        self.gamestate = reconstruct_state(data['STATE'])
+                    if 'ASYNC_RESPONSE' not in data:
+                        print("Quitting")
+                    else:
+                        self.gamestate = reconstruct_state(data['ASYNC_RESPONSE'])
+                        for (name, sock, addr) in self.child_connections:
+                            if name != curr_player_name:
+                            send_json({'BROADCAST': data['MESSAGE']}, sock)
+
                 elif event.type is "sync":
                     curr_player = self.gamestate.curr_player
                     curr_player_name = self.child_connections[curr_player][0]
@@ -231,7 +237,7 @@ class CardGame:
                     self.signal_sync_clients(event, curr_player_name)
                     self.gamestate = consume_message_queue(self.messages, self.message_lock,
                                                            self.message_cond, self, message_queue_fun,
-                                                           init_acc, self.gamestate)
+                                                           init_acc, self.gamestate, self.terminator)
                 elif event.type is 'next':
                     self.gamestate = event.closure(self.gamestate)
 
@@ -305,8 +311,8 @@ class CardGame:
                 #state needs to be passed
                 gamestate = reconstruct_state(data['STATE'])
                 new_state, message = event.closure(gamestate)
-                send_json({'BROADCAST': str(message)}, self.parent_socket)
-                send_json({'ASYNC_RESPONSE' : json.dumps(new_state.get_json())}, self.parent_socket)
+                send_json({'ASYNC_RESPONSE' : json.dumps(new_state.get_json()), 
+                           'MESSAGE' : message}, self.parent_socket)
 
             # probably need soemthing like this
             if 'STOP' in data:
@@ -348,7 +354,8 @@ def client_message_loop(sock, messages, lock, cond):
 
 
 def consume_message_queue(messages, queue_lock, queue_cond,
-                          game, sync_fun, init_acc, curr_state):
+                          game, sync_fun, init_acc, curr_state,
+                          terminator):
     new_state = curr_state
     accumulator = init_acc
     while True:
@@ -358,7 +365,7 @@ def consume_message_queue(messages, queue_lock, queue_cond,
                 queue_cond.wait()
             message = messages.pop(0)
             
-            if message is self.terminator:
+            if message is terminator:
                 break
             new_state, accumulator = sync_fun(self,
                                               game,
