@@ -43,6 +43,8 @@ def async_turn_bs(gamestate):
 
     player.hand.print_hand()
 
+    print("Current rank is: %d" % gamestate.curr_rank)
+
     print("which card(s) do you want to put down?")
 
     num_cards = 0
@@ -102,11 +104,11 @@ def sync_handle_bs(game, gamestate, already_called, message):
     """accept first BS call"""
 
     bs_player_name, called_bs = message
-    print("Called_bs: " + str(called_bs))
 
     curr_player = gamestate.players[gamestate.curr_player]
 
     if (not already_called) and called_bs:
+
         game.broadcast("%s called Bullshit! Let's see what see what %s really played:" % (bs_player_name, curr_player.name))
         game.broadcast(gamestate.last_move.to_string())
 
@@ -121,6 +123,8 @@ def sync_handle_bs(game, gamestate, already_called, message):
             game.broadcast("Looks like they're full of shit! %s takes the cards" % curr_player.name)
             for card in gamestate.cards_on_table.cards:
                 curr_player.hand.add_card(card)
+
+            gamestate.cards_on_table.cards = []
         else:
 
             game.broadcast("Looks like they were telling the truth! %s takes cards" % bs_player_name)
