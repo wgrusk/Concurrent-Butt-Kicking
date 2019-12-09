@@ -206,7 +206,7 @@ class CardGame:
 
     def run_server(self):
         winner = ""
-        has_won = True
+        has_won = False
 
         while not has_won:
             for event in self.event_queue:
@@ -279,7 +279,6 @@ class CardGame:
         t.start()
         self.run_client()
         t.join()
-        print("Thanks for playing!")
         sys.exit(0)
 
     def get_msg(self):
@@ -311,7 +310,6 @@ class CardGame:
 
             # probably need soemthing like this
             if 'STOP' in data:
-                print("Thanks for playing!")
                 return
 
     def signal_sync_clients(self, event, curr_player_name):
