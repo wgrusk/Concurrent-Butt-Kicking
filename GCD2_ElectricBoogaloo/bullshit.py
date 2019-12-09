@@ -1,5 +1,5 @@
 from GameClasses import *
-from ServerClient import *
+from GenCardGame import *
 
 
 def init_state_bs(gamestate):
@@ -92,8 +92,8 @@ def async_turn_bs(gamestate):
 def sync_turn_bs(gamestate):
 
     called_bs = False
-    call = input("Call BS? ('y'/'n'):")
-    if call == 'y':
+    call = input("Call BS? ('Y'/'N'):")
+    if call == 'Y':
         called_bs = True
 
     return called_bs
