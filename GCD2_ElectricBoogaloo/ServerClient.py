@@ -209,7 +209,7 @@ class CardGame:
         has_won = False
 
         while not has_won:
-            for event in self.event_queue:
+            for event in self.events:
                 if event.type is "async":
                     curr_player = self.gamestate.curr_player
                     curr_player_name = self.child_connections[curr_player][0]
