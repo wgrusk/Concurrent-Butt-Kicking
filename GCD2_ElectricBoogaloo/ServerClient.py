@@ -303,7 +303,7 @@ class CardGame:
                 gamestate = reconstruct_state(data['STATE'])
                 response = fun(gamestate)
                 #depending on what reponse is it might need to be converted to json
-                send_json({'SYNC_RESPONSE' : json.dumps(response)}, self.parent_socket)
+                send_json({'SYNC_RESPONSE' : response}, self.parent_socket)
 
             # these kinda do same thing?
             if 'ASYNC' in data:
@@ -311,7 +311,7 @@ class CardGame:
                 #state needs to be passed
                 gamestate = reconstruct_state(data['STATE'])
                 new_state, message = event.closure(gamestate)
-                send_json({'ASYNC_RESPONSE' : json.dumps(new_state.get_json()), 
+                send_json({'ASYNC_RESPONSE' : new_state.get_json(), 
                            'MESSAGE' : message}, self.parent_socket)
 
             # probably need soemthing like this
