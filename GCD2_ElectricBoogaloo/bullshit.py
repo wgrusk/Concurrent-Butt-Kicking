@@ -105,7 +105,7 @@ def sync_handle_bs(game, gamestate, already_called, message):
 
     curr_player = gamestate.players[gamestate.curr_player]
 
-    if not already_called and called_bs:
+    if (not already_called) and called_bs:
         game.broadcast("%s called Bullshit! Let's see what see what %s really played:" % (bs_player_name, curr_player.name))
         game.broadcast(gamestate.last_move.to_string())
 
