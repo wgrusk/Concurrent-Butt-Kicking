@@ -33,11 +33,11 @@ def win_cond_bs(gamestate):
 
 def async_turn_bs(gamestate):
     """do turn BS"""
-    player = gamestate.players[game.curr_player]
+    player = gamestate.players[gamestate.curr_player]
 
-    game.curr_rank = game.curr_rank + 1
-    if game.curr_rank > 13:
-        game.curr_rank = 1
+    gamestate.curr_rank = gamestate.curr_rank + 1
+    if gamestate.curr_rank > 13:
+        gamestate.curr_rank = 1
 
     print("It's your turn! This is your current hand:")
 
