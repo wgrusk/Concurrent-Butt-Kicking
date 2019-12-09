@@ -225,7 +225,7 @@ class CardGame:
                         self.gamestate = reconstruct_state(data['ASYNC_RESPONSE'])
                         for (name, sock, addr) in self.child_connections:
                             if name != curr_player_name:
-                            send_json({'BROADCAST': data['MESSAGE']}, sock)
+                                send_json({'BROADCAST': data['MESSAGE']}, sock)
 
                 elif event.type is "sync":
                     curr_player = self.gamestate.curr_player
