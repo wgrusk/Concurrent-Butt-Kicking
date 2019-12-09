@@ -405,7 +405,8 @@ def reconstruct_state(state):
         points = player['points']
         name = player['name']
         hand = reconstruct_hand(cards)
-        temp_player = Player(hand, name)
+        temp_player = Player(name)
+        temp_player.add_hand(hand)
         temp_player.points = points
         players.append(temp_player)
     game = GameState(players)
