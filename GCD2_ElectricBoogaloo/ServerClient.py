@@ -359,6 +359,7 @@ def consume_message_queue(messages, queue_lock, queue_cond,
     new_state = curr_state
     accumulator = init_acc
     while True:
+        print("Acc: " + str(accumulator))
         ## TODO: will this deadlock?  We never give up queue_lock...
         with queue_lock:
             if not messages:

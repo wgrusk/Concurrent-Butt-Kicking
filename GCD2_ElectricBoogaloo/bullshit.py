@@ -102,6 +102,7 @@ def sync_handle_bs(game, gamestate, already_called, message):
     """accept first BS call"""
 
     bs_player_name, called_bs = message
+    print("Called_bs: " + str(called_bs))
 
     curr_player = gamestate.players[gamestate.curr_player]
 
