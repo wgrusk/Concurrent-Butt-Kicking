@@ -302,10 +302,10 @@ class CardGame:
             # these kinda do same thing?
             if 'ASYNC' in data:
                 event = [e for e in self.events if e.uid == data['ASYNC']][0]
-                fun = event.closure
                 #state needs to be passed
                 gamestate = reconstruct_state(data['STATE'])
-                new_state = fun(gamestate)
+                new_state, message = event.closure(gamestate)
+                send_json({'BROADCAST': str(message)}, self.parent_socket)
                 send_json({'ASYNC_RESPONSE' : json.dumps(new_state.get_json())}, self.parent_socket)
 
             # probably need soemthing like this
