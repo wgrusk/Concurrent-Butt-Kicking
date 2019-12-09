@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import sys, socket, json, select, threading
-from utils import *
 from GameClasses import *
 
 PORT = 16390
@@ -8,7 +7,7 @@ state_change = None
 state_lock = threading.Lock()
 counter = 0
 
-standard_deck = [(1, 'H'), (2, 'H'), (3, 'H'), (4, 'H'), (5, 'H'), (6, 'H'), 
+STANDARD_DECK = [(1, 'H'), (2, 'H'), (3, 'H'), (4, 'H'), (5, 'H'), (6, 'H'), 
                  (7, 'H'), (8, 'H'), (9, 'H'), (10, 'H'), (11, 'H'), (12, 'H'), 
                  (13, 'H'), (1, 'S'), (2, 'S'), (3, 'S'), (4, 'S'), (5, 'S'), 
                  (6, 'S'), (7, 'S'), (8, 'S'), (9, 'S'), (10, 'S'), (11, 'S'), 
@@ -17,6 +16,30 @@ standard_deck = [(1, 'H'), (2, 'H'), (3, 'H'), (4, 'H'), (5, 'H'), (6, 'H'),
                  (11, 'D'), (12, 'D'), (13, 'D'), (1, 'C'), (2, 'C'), (3, 'C'), 
                  (4, 'C'), (5, 'C'), (6, 'C'), (7, 'C'), (8, 'C'), (9, 'C'), 
                  (10, 'C'), (11, 'C'), (12, 'C'), (13, 'C')]
+
+##################### UTILITY FUNCTIONS ######################################
+
+# Format an int with the correct number of leading zeros for standard reading
+def format_int(n):
+    f = str(n)
+    while len(f) < 9:
+        f = str(0) + f
+    return f
+
+# Sends a json dict over the passed socket
+def send_json(j, sock):
+    jstr = json.dumps(j)
+    msg_len = format_int(len(jstr))
+    sock.send(msg_len.encode('utf-8'))
+    sock.send(jstr.encode('utf-8'))
+
+# Receives a json from the passed socket and returns it as a dict
+def recv_json(sock):
+    msg_len = int(sock.recv(9).decode('utf-8'))
+    msg = json.loads(sock.recv(msg_len).decode('utf-8'))
+    return msg
+
+#############################################################################
 
 class CardGame:
     ## TODO: client provided functions should be initialized to none so that
@@ -57,7 +80,7 @@ class CardGame:
         self.min_players     = None
         self.max_players     = None
         self.init_state_func = None
-        self.state           = None
+        self.gamestate           = None
         self.win_check_flag  = False
         self.is_host         = False
     
@@ -81,7 +104,7 @@ class CardGame:
                                       f))
         counter += 1
 
-    def add_wincheck_event(self, f)
+    def add_wincheck_event(self, f):
         self.add_event("win", f)
         self.win_check_flag = True
 
@@ -91,19 +114,23 @@ class CardGame:
     def add_sync_event(self, f, init_acc):
         self.add_event("sync", (f, init_acc))
 
+    def add_next_turn(self, f):
+        self.add_event("next", f)
+
+
     ## Asserts that the game is ready to run.  If not, exit.
     def ready_check(self):
-        assert self.min_players != None && self.max_players != None, \
-               "Error: Number of players not set! "
-               "Call set_num_players((min, max)) to fix. Exiting!\n"
+        assert self.min_players != None and self.max_players != None, \
+            "Error: Number of players not set! " + \
+            "Call set_num_players((min, max)) to fix. Exiting!\n"
         assert self.events != [], \
-               "Error: Event queue is empty! Add at least one event! Exiting!\n"
+            "Error: Event queue is empty! Add at least one event! Exiting!\n"
         assert self.init_state_func != None, \
-               "Error: Missing init_state_function. "
-               "Call set_init_state(init_state_func) to fix.  Exiting!\n"
+            "Error: Missing init_state_function. " + \
+            "Call set_init_state(init_state_func) to fix.  Exiting!\n"
         assert self.win_check_flag, \
-               "Error: Win check is not used, game may not finish! "
-               "Call add_wincheck_event(wincheck_func) to fix. Exiting!\n"
+            "Error: Win check is not used, game may not finish! " + \
+            "Call add_wincheck_event(wincheck_func) to fix. Exiting!\n"
 
     def run(self):
         self.ready_check()
@@ -111,7 +138,14 @@ class CardGame:
         if len(sys.argv) == 2 and sys.argv[1] == '-h':
             self.is_host = True
             self.setup_lobby()
-            self.start_server()
+
+            players = []
+            for (name, sock, addr) in self.child_connections:
+                players.append(Player(name))
+
+            self.gamestate = self.init_state_func(GameState(players))
+
+            self.run_server()
         elif len(sys.argv) == 4 and sys.argv[2] == '-c':
             self.is_host = False
             self.setup_parent_connection()
@@ -175,6 +209,45 @@ class CardGame:
             send_json({'msg':'Starting the game!', 'START': 1}, conn)
 
     def run_server(self):
+        winner = ""
+        has_won = True
+
+        while not has_won:
+            for event in self.event_queue:
+                if event.type is "async":
+                    curr_player = self.gamestate.curr_player
+                    curr_player_name = self.child_connections[curr_player][0]
+                    for (name, sock, addr) in self.child_connections:
+                        if name != curr_player_name:
+                            send_json({'BROADCAST': "It's " curr_player_name + "'s turn"}, sock)
+
+                    send_json({'ASYNC': event.uid, 'STATE': json.dumps(self.gamestate.get_json())},  self.child_connections[curr_player][1])
+                    data = recv_json(self.child_connections[curr_player][1])
+                    if 'ASYNC_RESPONSE' in data:
+                        self.gamestate = reconstruct_state(data['STATE'])
+                elif event.type is "sync":
+                    curr_player = self.gamestate.curr_player
+                    curr_player_name = self.child_connections[curr_player][0]
+
+                    init_acc = event.closure[1]
+                    message_queue_fun = event.closure[0]
+
+                    self.signal_sync_clients(event, curr_player_name)
+                    self.gamestate = consume_message_queue(self.messages, self.message_lock,
+                                                           self.message_cond, self, message_queue_fun,
+                                                           init_acc, self.gamestate)
+                elif event.type is 'next':
+                    self.gamestate = event.closure(self.gamestate)
+
+                elif event.type is "win":
+                    has_won, winner = event.closure(self.gamestate)
+                    if has_won:
+                        break
+
+        for (name, sock, addr) in self.child_connections:
+            send_json({'BROADCAST': winner + " has won!!"}, sock)
+            send_json({'STOP': " "}, sock)
+
         
     
     def broadcast(self, msg):
@@ -214,24 +287,17 @@ class CardGame:
         sys.exit(0)
 
     def get_msg(self):
-        ## Read a message if there is one
         with self.message_lock:
-            if messages:
-                return messages.pop(0)
-        
-        ## Else Wait for a message to come in
-        self.message_cond.wait()
-
-        ## Then read it
-        with self.message_lock:
-            return messages.pop(0)
+            if not self.messages:
+                self.messages_cond.wait()
+            return self.messages.pop(0)
 
     def run_client(self):
         while True:
             data = self.get_msg()
 
             if 'SYNC' in data:
-                event = list(filter(lambda e: e.uid == data['SYNC'].uid, self.events))[0]
+                event = list(filter(lambda e: e.uid == data['SYNC'], self.events))[0]
                 fun = event.closure
                 gamestate = reconstruct_state(data['STATE'])
                 response = fun(gamestate)
@@ -240,7 +306,7 @@ class CardGame:
 
             # these kinda do same thing?
             if 'ASYNC' in data:
-                event = list(filter(lambda e: e.uid == data['SYNC'].uid, self.events))[0]
+                event = list(filter(lambda e: e.uid == data['ASYNC'], self.events))[0]
                 fun = event.closure
                 #state needs to be passed
                 gamestate = reconstruct_state(data['STATE'])
@@ -249,14 +315,16 @@ class CardGame:
 
             # probably need soemthing like this
             if 'STOP' in data:
+                print("Thanks for playing!")
                 return
 
-    def signal_sync_clients(self, event):
+    def signal_sync_clients(self, event, curr_player_name):
         threads = []
         for (name, conn, addr) in self.child_connections:
-            t = threading.Thread(target=sync_thread,
-                                 args=(conn, self.messages, self.message_lock, 
-                                       self.message_cond, self.event.uid, name))
+            if name is not curr_player_name:
+                t = threading.Thread(target=sync_thread,
+                                     args=(conn, self.messages, self.message_lock, 
+                                           self.message_cond, event.uid, name))
             t.start()
             threads.append(t)
         
@@ -282,6 +350,9 @@ def client_message_loop(sock, messages, lock, cond):
             if 'STOP' in data:
                 return
 
+def send_client_sync(sock, gamestate):
+    send_json({'SYNC': event.uid, 'STATE': json.dumps(self.gamestate.get_json())},  self.child_connections[curr_player][1])
+
 # TODO
 # We need to have the user specify the initial accumulator
 def consume_message_queue(messages, queue_lock, queue_cond,
@@ -303,7 +374,6 @@ def consume_message_queue(messages, queue_lock, queue_cond,
                                               accumulator,
                                               message)
 
-    new_state = game.next_player(new_state)
     return new_state
 
 
@@ -324,14 +394,14 @@ def sync_thread(conn, messages, message_lock, message_cond, uid, name):
         message_cond.notify()
 
 # client side
-def do_turn_caller(game_state, do_turn, server_sock, player, index):
-    global state_change
-    state_change, message = do_turn(game_state, player, index)
-    curr_state = state_change.get_json()
-    send_json({'STATE_CHANGE': json.dumps(curr_state)}, \
-                          server_sock)
-    if message != '':
-        send_json({'msg':message}, server_sock)
+# def do_turn_caller(game_state, do_turn, server_sock, player, index):
+#     global state_change
+#     state_change, message = do_turn(game_state, player, index)
+#     curr_state = state_change.get_json()
+#     send_json({'STATE_CHANGE': json.dumps(curr_state)}, \
+#                           server_sock)
+#     if message != '':
+#         send_json({'msg':message}, server_sock)
 
 def reconstruct_state(state):
     game_state = json.loads(state)

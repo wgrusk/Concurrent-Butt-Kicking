@@ -94,8 +94,8 @@ def sync_handle_bs(game, gamestate, already_called, message):
 
     if not already_called and called_bs:
         game.broadcast("%s called Bullshit! Let's see what see what %s really played:" % (bs_player_name, curr_player.name))
-        game.broadcast(# print gamestate.last_turn)
-            )
+        game.broadcast(gamestate.last_move.to_string())
+
         rank = gamestate.curr_rank
 
         lied = False
@@ -122,17 +122,11 @@ def sync_handle_bs(game, gamestate, already_called, message):
     else:
         return (gamestate, already_called)
 
-def next_bs_player(gamestate):
-    gamestate.curr_player += 1
-    if gamestate.curr_player == len(gamestate.players):
-        gamestate.curr_player = 0
+def next_player_bs(gamestate):
+    gamestate.curr_player = (gamestate.curr_player + 1) % len(gamestate.players)
 
     return gamestate
 
-
-
-def print_game(game, index):
-    game.players[index].hand.print_hand_vertical()
 
 def main():
 
@@ -144,8 +138,8 @@ def main():
     # defining game logic
     c.add_async_event(async_turn_bs)
     c.add_sync_event(sync_turn_bs, sync_handle_bs, False)
-    c.add_wincheck_event(check_win) 
-    c.add_next_turn(next_bs_player)
+    c.add_wincheck_event(win_cond_bs) 
+    c.add_next_turn(next_player_bs)
     
     # running game
     c.run()
