@@ -273,10 +273,6 @@ class CardGame:
                 self.start_client()
     
     def start_client(self):
-        if self.do_turn_func == None:
-            print("do_turn function not provided, cannot run game!", 
-                  file=sys.stderr)
-        
         t = threading.Thread(target=client_message_loop, 
                              args=(self.parent_socket, self.messages, 
                                    self.message_lock, self.message_cond))
