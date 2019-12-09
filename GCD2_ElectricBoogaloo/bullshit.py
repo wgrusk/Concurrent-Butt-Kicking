@@ -57,8 +57,22 @@ def async_turn_bs(gamestate):
                 print("You must play at least 1 card")
                 continue
             break
+        try:
+            num = int(num)
+        except:
+            print("Please enter a valid number")
+            continue
+        if num < 1 or num > 13:
+            print("Please enter a valid number")
+            continue
         suit = input("Suit (D, H, C, or S): ")
-        card_to_play = PlayingCard((int(num), suit))
+        if suit is not 'D' and
+           suit is not 'H' and
+           suit is not 'C' and
+           suit is not 'S':
+            print("Please enter a valid suit")
+            continue
+        card_to_play = PlayingCard(num, suit)
         played = player.hand.pick_card(card_to_play)
         if played == None:
             print("That card is not in your hand... try again:")
