@@ -1,0 +1,21 @@
+Project: GenCardGame
+Team Name: concurrent_butt_kicking
+Team Members: Will Rusk, Johanna Ross, Jake Bennert
+
+-- Relevant Files --
+GenCardGame.py
+    - Contains all the classes that make up the concurrent card game, listed
+      here:
+        * CardGame
+        * GameState
+        * Player
+        * Hand
+        * Deck
+        * PlayingCard
+        * WordCard
+        
+bullshit.py
+    - File in which the game ‘Bullshit’ is defined, using the GenCardGame API.
+    - This file will be run with different command line arguments depending on 
+      if you want to set up a server or join an existing game.
+
