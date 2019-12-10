@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 import sys, socket, json, select, threading
-from GameClasses import *
 
 PORT = 16390
 state_change = None
